@@ -84,3 +84,7 @@ dotnet run --project samples/Alethic.Epicor.Kinetic.Sample -- call Erp.BO.Custom
 ```
 
 See `CLAUDE.md` for coding conventions.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
