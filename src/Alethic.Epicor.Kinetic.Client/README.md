@@ -188,7 +188,8 @@ var result = await functions.InvokeAsync<JsonElement>(
 
 The registered clients enforce the timeout themselves and leave `HttpClient.Timeout` infinite. An `HttpClient` built by
 hand over `KineticHttpHandler` keeps its own `Timeout` as an outer limit, so set it to `Timeout.InfiniteTimeSpan` there
-too.
+too. On .NET Framework such a client reports a timeout as a bare `TaskCanceledException`, because its
+`HttpClient` replaces the handler's exception; the library's own clients restore the `TimeoutException`.
 
 Function calls, BAQ calls and entity set queries take it the same way, timeout included. An OData context takes it once,
 in `ForService`, `ForBaq` or `Configure`, and sends it with every query it makes. Its timeout applies to each query, and

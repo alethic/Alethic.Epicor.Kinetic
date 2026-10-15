@@ -140,7 +140,9 @@ public sealed partial class KineticHttpHandler : DelegatingHandler
         catch (OperationCanceledException e) when (timeoutSource.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
         {
             var message = $"The Kinetic request was canceled after its timeout of {timeout.TotalSeconds} seconds elapsed.";
-            throw new TaskCanceledException(message, new TimeoutException(message, e));
+            var exception = new TaskCanceledException(message, new TimeoutException(message, e));
+            KineticHttp.SetTimedOut(request, exception);
+            throw exception;
         }
     }
 

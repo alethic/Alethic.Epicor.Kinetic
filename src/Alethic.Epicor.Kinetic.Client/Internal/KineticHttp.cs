@@ -44,8 +44,15 @@ static partial class KineticHttp
     /// </summary>
     const string CallSettingsOption = "Alethic.Epicor.Kinetic.CallSettings";
 
+    /// <summary>
+    /// Name of the request option that carries the exception <see cref="KineticHttpHandler"/> threw when the request
+    /// timed out.
+    /// </summary>
+    const string TimeoutOption = "Alethic.Epicor.Kinetic.Timeout";
+
 #if NET8_0_OR_GREATER
     static readonly HttpRequestOptionsKey<KineticCallSettings> _callSettingsKey = new(CallSettingsOption);
+    static readonly HttpRequestOptionsKey<TaskCanceledException> _timeoutKey = new(TimeoutOption);
 #endif
 
     /// <summary>
@@ -83,6 +90,51 @@ static partial class KineticHttp
 #else
         return request.Properties.TryGetValue(CallSettingsOption, out var settings) ? settings as KineticCallSettings : null;
 #endif
+    }
+
+    /// <summary>
+    /// Records on a request the exception thrown because it timed out, so <see cref="SendAsync"/> can rethrow it when the
+    /// HttpClient replaces it with a bare cancellation, as .NET Framework's does.
+    /// </summary>
+    public static void SetTimedOut(HttpRequestMessage request, TaskCanceledException exception)
+    {
+#if NET8_0_OR_GREATER
+        request.Options.Set(_timeoutKey, exception);
+#else
+        request.Properties[TimeoutOption] = exception;
+#endif
+    }
+
+    /// <summary>
+    /// Returns the exception recorded by <see cref="SetTimedOut"/>, or <c>null</c> when the request did not time out.
+    /// </summary>
+    static TaskCanceledException? GetTimedOut(HttpRequestMessage request)
+    {
+#if NET8_0_OR_GREATER
+        return request.Options.TryGetValue(_timeoutKey, out var exception) ? exception : null;
+#else
+        return request.Properties.TryGetValue(TimeoutOption, out var exception) ? exception as TaskCanceledException : null;
+#endif
+    }
+
+    /// <summary>
+    /// Sends a request, returning once the response headers arrive. A timeout is reported as the
+    /// <see cref="TaskCanceledException"/> wrapping a <see cref="TimeoutException"/> that the handler threw, on every
+    /// target framework.
+    /// </summary>
+    public static async Task<HttpResponseMessage> SendAsync(
+        HttpClient http,
+        HttpRequestMessage request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException e) when (GetTimedOut(request) is { } timeout && !ReferenceEquals(e, timeout))
+        {
+            throw timeout;
+        }
     }
 
     /// <summary>
@@ -138,7 +190,7 @@ static partial class KineticHttp
         if (body is not null)
             request.Content = new StringContent(JsonSerializer.Serialize(body, body.GetType(), json), Encoding.UTF8, "application/json");
 
-        using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+        using var response = await SendAsync(http, request, cancellationToken).ConfigureAwait(false);
 
         if (!response.IsSuccessStatusCode)
         {

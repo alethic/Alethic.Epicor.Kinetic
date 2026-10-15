@@ -213,7 +213,7 @@ sealed class KineticODataRequestMessage : DataServiceClientRequestMessage
                 request.Content?.Headers.TryAddWithoutValidation(header.Key, header.Value);
         }
 
-        var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, _abort.Token).ConfigureAwait(false);
+        var response = await KineticHttp.SendAsync(_http, request, _abort.Token).ConfigureAwait(false);
         await response.Content.LoadIntoBufferAsync().ConfigureAwait(false);
         var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
         return new KineticODataResponseMessage(response, stream);
