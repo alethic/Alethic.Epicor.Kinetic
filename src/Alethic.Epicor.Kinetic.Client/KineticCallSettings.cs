@@ -5,9 +5,11 @@ using Alethic.Epicor.Kinetic.Client.Internal;
 namespace Alethic.Epicor.Kinetic.Client;
 
 /// <summary>
-/// CallSettings values for a single call. Each value given replaces the configured one in <see cref="KineticOptions"/>
-/// for that call only; a value left null keeps the configured one. Use it to work in another plant for one call, such
-/// as reading a business object that scopes its rows to the session's plant, or to give one slow call more time.
+/// Settings for a single call. Each value given replaces the configured one in <see cref="KineticOptions"/> for that
+/// call only; a value left null keeps the configured one. <see cref="Plant"/>, <see cref="Language"/> and
+/// <see cref="FormatCulture"/> are sent to Kinetic in the CallSettings header; <see cref="Timeout"/> is applied by the
+/// client. Use it to work in another plant for one call, such as reading a business object that scopes its rows to the
+/// session's plant, or to give one slow call more time.
 /// </summary>
 public sealed record KineticCallSettings
 {
