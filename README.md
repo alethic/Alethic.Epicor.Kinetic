@@ -41,7 +41,7 @@ var customer = response!.ReturnObj!.Customer[0];
 ```
 
 `KineticOptions.Plant`, `Language` and `FormatCulture` go out in the `CallSettings` header on every call. To use another plant
-for one call, pass `KineticCallSettings` to a service or BAQ call, or to `ForService`, `ForBaq` or `Configure` for every
+for one call, pass `KineticCallSettings` to a service, function or BAQ call, or to `ForService`, `ForBaq` or `Configure` for every
 query of an OData context; values it leaves null keep the configured ones. Some business objects, such as
 `Erp.BO.CustShipSvc`, return only the rows of the session's plant, so reading them across plants takes one call per plant:
 
