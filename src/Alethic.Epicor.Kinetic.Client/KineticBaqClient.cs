@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
-using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -13,17 +12,6 @@ namespace Alethic.Epicor.Kinetic.Client;
 /// <inheritdoc cref="IKineticBaqClient"/>
 public sealed class KineticBaqClient : IKineticBaqClient
 {
-
-    sealed class ODataCollection<T>
-    {
-
-        /// <summary>
-        /// The rows of the OData collection payload.
-        /// </summary>
-        [JsonPropertyName("value")]
-        public List<T>? Value { get; init; }
-
-    }
 
     readonly HttpClient _http;
     readonly KineticOptions _options;
@@ -46,25 +34,14 @@ public sealed class KineticBaqClient : IKineticBaqClient
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<TRow>> QueryAsync<TRow>(
+    public Task<IReadOnlyList<TRow>> QueryAsync<TRow>(
         string baqId,
         BaqQuery? query = null,
         KineticCallSettings? callSettings = null,
         CancellationToken cancellationToken = default)
     {
         var uri = DataUri(baqId, query?.ToQueryString() ?? string.Empty);
-        var json = _options.JsonSerializerOptions;
-        var page = await KineticHttp.SendJsonAsync<ODataCollection<TRow>>(
-            _http,
-            _logger,
-            HttpMethod.Get,
-            uri,
-            null,
-            callSettings,
-            json,
-            cancellationToken).ConfigureAwait(false);
-
-        return page?.Value ?? new List<TRow>();
+        return KineticHttp.QueryAllAsync<TRow>(_http, _logger, uri, callSettings, _options.JsonSerializerOptions, cancellationToken);
     }
 
     /// <inheritdoc/>

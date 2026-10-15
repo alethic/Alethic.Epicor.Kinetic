@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -5,8 +6,9 @@ using System.Threading.Tasks;
 namespace Alethic.Epicor.Kinetic.Client;
 
 /// <summary>
-/// Calls any business object service method: <c>POST api/v2/odata/{company}/{service}/{method}</c>. This is the generic
-/// layer; typed wrappers for specific services can be built on it.
+/// Calls any business object service method: <c>POST api/v2/odata/{company}/{service}/{method}</c>, and queries any
+/// service's OData entity sets: <c>GET api/v2/odata/{company}/{service}/{entitySet}</c>. This is the generic layer; typed
+/// wrappers for specific services can be built on it.
 /// </summary>
 public interface IKineticServiceClient
 {
@@ -41,6 +43,17 @@ public interface IKineticServiceClient
         string service,
         string method,
         object? parameters = null,
+        KineticCallSettings? callSettings = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Reads the rows of a service's OData entity set, such as <c>Erp.BO.CustShipSvc</c>'s <c>ShipDtls</c>, with optional
+    /// query options and call settings. Every page the server returns is read, following <c>@odata.nextLink</c>.
+    /// </summary>
+    Task<IReadOnlyList<TRow>> QueryAsync<TRow>(
+        string service,
+        string entitySet,
+        ODataQuery? query = null,
         KineticCallSettings? callSettings = null,
         CancellationToken cancellationToken = default);
 

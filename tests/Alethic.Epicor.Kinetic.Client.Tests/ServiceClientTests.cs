@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Text.Json;
@@ -206,6 +207,61 @@ public class ServiceClientTests
         await client.CallAsync("Erp.BO.PartSvc", "GetList");
 
         Assert.Null(Assert.Single(handler.Requests).Header("CallSettings"));
+    }
+
+    sealed class PackLine
+    {
+
+        /// <summary>
+        /// The pack the line is on.
+        /// </summary>
+        public int PackNum { get; set; }
+
+    }
+
+    /// <summary>
+    /// An entity set query gets the set's URL with the escaped options and reads every page the server returns.
+    /// </summary>
+    [Fact]
+    public async Task Query_reads_every_page_of_an_entity_set()
+    {
+        var (provider, handler) = TestHost.Build();
+        handler.Respond = request => request.RequestUri!.Query.Contains("$skiptoken", System.StringComparison.Ordinal)
+            ? FakeHttpHandler.Json(200, """{"value":[{"PackNum":3}]}""")
+            : FakeHttpHandler.Json(200, """{"value":[{"PackNum":1},{"PackNum":2}],"@odata.nextLink":"ShipDtls?$skiptoken=2"}""");
+        var client = provider.GetRequiredService<IKineticServiceClient>();
+
+        var lines = await client.QueryAsync<PackLine>(
+            "Erp.BO.CustShipSvc", "ShipDtls", new ODataQuery { Filter = "OrderNum eq 5001", Select = "PackNum" });
+
+        Assert.Equal([1, 2, 3], lines.Select(l => l.PackNum));
+        Assert.Equal(2, handler.Requests.Count);
+        Assert.All(handler.Requests, r => Assert.Equal(HttpMethod.Get, r.Method));
+        const string Set = "https://example.epicorsaas.com/prod/api/v2/odata/100/Erp.BO.CustShipSvc/ShipDtls";
+        Assert.Equal(Set + "?$filter=OrderNum%20eq%205001&$select=PackNum", handler.Requests[0].Uri.AbsoluteUri);
+        Assert.Equal(Set + "?$skiptoken=2", handler.Requests[1].Uri.AbsoluteUri);
+    }
+
+    /// <summary>
+    /// Every page of an entity set query carries the call's own settings.
+    /// </summary>
+    [Fact]
+    public async Task Query_applies_call_settings_to_every_page()
+    {
+        const string FirstPage = """
+            {"value":[],"@odata.nextLink":"https://example.epicorsaas.com/prod/api/v2/odata/100/Erp.BO.PlantSvc/Plants?$skiptoken=1"}
+            """;
+        var (provider, handler) = TestHost.Build();
+        handler.Respond = request => request.RequestUri!.Query.Contains("$skiptoken", System.StringComparison.Ordinal)
+            ? FakeHttpHandler.Json(200, """{"value":[]}""")
+            : FakeHttpHandler.Json(200, FirstPage);
+        var client = provider.GetRequiredService<IKineticServiceClient>();
+
+        await client.QueryAsync<JsonElement>("Erp.BO.PlantSvc", "Plants", null, new KineticCallSettings { Plant = "West" });
+
+        Assert.Equal(2, handler.Requests.Count);
+        Assert.All(handler.Requests, r => Assert.Equal("""{"Company":"100","Plant":"West"}""", r.Header("CallSettings")));
+        Assert.Equal("https://example.epicorsaas.com/prod/api/v2/odata/100/Erp.BO.PlantSvc/Plants", handler.Requests[0].Uri.AbsoluteUri);
     }
 
 }
