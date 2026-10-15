@@ -25,7 +25,7 @@ sealed class KineticODataRequestMessage : DataServiceClientRequestMessage
                 if (completed.IsFaulted)
                     completion.TrySetException(completed.Exception!.InnerExceptions);
                 else if (completed.IsCanceled)
-                    completion.TrySetCanceled();
+                    completion.TrySetException(CancellationOf(completed));
                 else
                     completion.TrySetResult(completed.Result);
 
@@ -36,6 +36,23 @@ sealed class KineticODataRequestMessage : DataServiceClientRequestMessage
             TaskScheduler.Default);
 
         return completion.Task;
+    }
+
+    /// <summary>
+    /// Returns the exception a cancelled task was cancelled with, so a timeout keeps its <see cref="TimeoutException"/>.
+    /// </summary>
+    static Exception CancellationOf(Task task)
+    {
+        try
+        {
+            task.GetAwaiter().GetResult();
+        }
+        catch (OperationCanceledException e)
+        {
+            return e;
+        }
+
+        return new TaskCanceledException(task);
     }
 
     readonly HttpClient _http;
@@ -87,12 +104,12 @@ sealed class KineticODataRequestMessage : DataServiceClientRequestMessage
     public override ICredentials Credentials { get; set; } = null!;
 
     /// <summary>
-    /// Ignored. The HttpClient timeout applies.
+    /// Ignored. The call settings' timeout, or the configured one, applies.
     /// </summary>
     public override int Timeout { get; set; }
 
     /// <summary>
-    /// Ignored. The HttpClient timeout applies.
+    /// Ignored. The call settings' timeout, or the configured one, applies.
     /// </summary>
     public override int ReadWriteTimeout { get; set; }
 
@@ -196,7 +213,7 @@ sealed class KineticODataRequestMessage : DataServiceClientRequestMessage
                 request.Content?.Headers.TryAddWithoutValidation(header.Key, header.Value);
         }
 
-        var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, _abort.Token).ConfigureAwait(false);
+        var response = await KineticHttp.SendAsync(_http, request, _abort.Token).ConfigureAwait(false);
         await response.Content.LoadIntoBufferAsync().ConfigureAwait(false);
         var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
         return new KineticODataResponseMessage(response, stream);

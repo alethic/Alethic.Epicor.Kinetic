@@ -11,7 +11,7 @@ namespace Alethic.Epicor.Kinetic.Client.Tests;
 public class ODataContextFactoryTests
 {
 
-    const string ServiceRoot = "https://example.epicorsaas.com/prod/api/v2/odata/100/Erp.BO.CustomerSvc/";
+    internal const string ServiceRoot = "https://example.epicorsaas.com/prod/api/v2/odata/100/Erp.BO.CustomerSvc/";
 
     const string CustomerMetadata = """
         <?xml version="1.0" encoding="utf-8"?>
@@ -41,12 +41,12 @@ public class ODataContextFactoryTests
          "value":[{"Company":"100","CustNum":1,"CustID":"ACME","Name":"Acme Corp"}]}
         """;
 
-    static bool IsMetadata(CapturedRequest request)
+    internal static bool IsMetadata(CapturedRequest request)
     {
         return request.Uri.AbsoluteUri.EndsWith("$metadata", StringComparison.Ordinal);
     }
 
-    static HttpResponseMessage FakeKineticService(HttpRequestMessage request)
+    internal static HttpResponseMessage FakeKineticService(HttpRequestMessage request)
     {
         if (request.RequestUri!.AbsoluteUri.EndsWith("$metadata", StringComparison.Ordinal))
             return FakeHttpHandler.Text(200, CustomerMetadata, "application/xml");
@@ -56,7 +56,7 @@ public class ODataContextFactoryTests
         return response;
     }
 
-    static Task<System.Collections.Generic.IEnumerable<Customer>> QueryAcme(DataServiceContext context)
+    internal static Task<System.Collections.Generic.IEnumerable<Customer>> QueryAcme(DataServiceContext context)
     {
         var query = (DataServiceQuery<Customer>)context.CreateQuery<Customer>("Customers").Where(c => c.CustID == "ACME").Take(1);
         return query.ExecuteAsync();

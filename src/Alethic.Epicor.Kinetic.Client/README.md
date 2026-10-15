@@ -62,7 +62,7 @@ services.AddKineticClient(options =>
 | `Username`, `Password` | yes, unless a token provider is set | A Kinetic user for Basic authentication. |
 | `AccessTokenProvider` | no | Supplies a bearer token instead, for users who sign in through Epicor IdP or Entra ID. |
 | `Plant`, `Language`, `FormatCulture` | no | Sent in the `CallSettings` header on every call. |
-| `Timeout` | no | The `HttpClient` timeout. Defaults to 100 seconds. |
+| `Timeout` | no | How long a call may take. Defaults to 100 seconds. `Timeout.InfiniteTimeSpan` turns it off. |
 
 Both registrations take an optional hook that runs on every Kinetic `HttpClient`, for example to add a resilience
 handler from Microsoft.Extensions.Http.Resilience:
@@ -177,8 +177,24 @@ foreach (var plant in plants)
 }
 ```
 
-Function calls, BAQ calls and entity set queries take it the same way. An OData context takes it once, in `ForService`, `ForBaq` or `Configure`,
-and sends it with every query it makes.
+`KineticCallSettings` also takes a `Timeout` for the one call, longer or shorter than the configured one. It is not sent
+to Kinetic; the client cancels the call when it elapses and throws `TaskCanceledException` wrapping a
+`TimeoutException`, as `HttpClient` does:
+
+```csharp
+var result = await functions.InvokeAsync<JsonElement>(
+    "ExampleFunctions", "RebuildCosts", null, new KineticCallSettings { Timeout = TimeSpan.FromMinutes(10) });
+```
+
+The registered clients enforce the timeout themselves and leave `HttpClient.Timeout` infinite. An `HttpClient` built by
+hand over `KineticHttpHandler` keeps its own `Timeout` as an outer limit, so set it to `Timeout.InfiniteTimeSpan` there
+too. On .NET Framework such a client reports a timeout as a bare `TaskCanceledException`, because its
+`HttpClient` replaces the handler's exception; the library's own clients restore the `TimeoutException`.
+
+Function calls, BAQ calls and entity set queries take it the same way, timeout included. An OData context takes it once,
+in `ForService`, `ForBaq` or `Configure`, and sends it with every query it makes. Its timeout applies to each query, and
+Microsoft.OData.Client wraps the `TaskCanceledException` in an `InvalidOperationException`, so look for it among the
+inner exceptions there. The shared `$metadata` download always uses the configured timeout.
 
 ## Errors
 
