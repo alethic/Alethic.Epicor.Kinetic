@@ -39,6 +39,7 @@ sealed class KineticODataRequestMessage : DataServiceClientRequestMessage
     }
 
     readonly HttpClient _http;
+    readonly KineticCallSettings? _callSettings;
     readonly Dictionary<string, string> _headers = new(StringComparer.OrdinalIgnoreCase);
     readonly MemoryStream _body = new();
     readonly CancellationTokenSource _abort = new();
@@ -46,12 +47,14 @@ sealed class KineticODataRequestMessage : DataServiceClientRequestMessage
     Uri _url;
 
     /// <summary>
-    /// Creates a message for the request described by <paramref name="args"/> that will be sent with <paramref name="http"/>.
+    /// Creates a message for the request described by <paramref name="args"/> that will be sent with <paramref name="http"/>,
+    /// carrying <paramref name="callSettings"/> when given.
     /// </summary>
-    public KineticODataRequestMessage(DataServiceClientRequestMessageArgs args, HttpClient http)
+    public KineticODataRequestMessage(DataServiceClientRequestMessageArgs args, HttpClient http, KineticCallSettings? callSettings)
         : base(args.ActualMethod)
     {
         _http = http;
+        _callSettings = callSettings;
         _method = args.Method;
         _url = args.RequestUri;
 
@@ -178,6 +181,9 @@ sealed class KineticODataRequestMessage : DataServiceClientRequestMessage
     async Task<IODataResponseMessage> SendAsync()
     {
         using var request = new HttpRequestMessage(new HttpMethod(ActualMethod), _url);
+        if (_callSettings is not null)
+            KineticHttp.SetCallSettings(request, _callSettings);
+
         if (_body.Length > 0 || _headers.ContainsKey("Content-Type"))
             request.Content = new ByteArrayContent(_body.ToArray());
 

@@ -95,6 +95,25 @@ public class ODataContextFactoryTests
     }
 
     /// <summary>
+    /// A context made with call settings sends its queries with them; the shared metadata download does not carry them.
+    /// </summary>
+    [Fact]
+    public async Task ForService_with_call_settings_sends_them_on_each_query()
+    {
+        var (provider, handler) = TestHost.Build(options => options.Plant = "MfgSys");
+        handler.Respond = FakeKineticService;
+        var factory = provider.GetRequiredService<IKineticODataContextFactory>();
+
+        await QueryAcme(factory.ForService("Erp.BO.CustomerSvc", new KineticCallSettings { Plant = "West" }));
+        await QueryAcme(factory.ForService("Erp.BO.CustomerSvc"));
+
+        Assert.Equal("""{"Company":"100","Plant":"MfgSys"}""", Assert.Single(handler.Requests, IsMetadata).Header("CallSettings"));
+        var queries = handler.Requests.Where(r => !IsMetadata(r)).ToList();
+        Assert.Equal("""{"Company":"100","Plant":"West"}""", queries[0].Header("CallSettings"));
+        Assert.Equal("""{"Company":"100","Plant":"MfgSys"}""", queries[1].Header("CallSettings"));
+    }
+
+    /// <summary>
     /// The service model is downloaded once per service root and reused by later contexts.
     /// </summary>
     [Fact]

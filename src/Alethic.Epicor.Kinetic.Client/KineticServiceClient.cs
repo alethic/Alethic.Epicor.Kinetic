@@ -27,11 +27,7 @@ public sealed class KineticServiceClient : IKineticServiceClient
     }
 
     /// <inheritdoc/>
-    public Task<TResponse?> CallAsync<TResponse>(
-        string service,
-        string method,
-        object? parameters = null,
-        CancellationToken cancellationToken = default)
+    public Task<TResponse?> CallAsync<TResponse>(string service, string method, object? parameters, CancellationToken cancellationToken)
     {
         return CallAsync<TResponse>(service, method, parameters, null, cancellationToken);
     }
@@ -40,8 +36,8 @@ public sealed class KineticServiceClient : IKineticServiceClient
     public Task<TResponse?> CallAsync<TResponse>(
         string service,
         string method,
-        object? parameters,
-        KineticCallSettings? callSettings,
+        object? parameters = null,
+        KineticCallSettings? callSettings = null,
         CancellationToken cancellationToken = default)
     {
         Guard.NotNullOrWhiteSpace(service, nameof(service));
@@ -53,7 +49,7 @@ public sealed class KineticServiceClient : IKineticServiceClient
     }
 
     /// <inheritdoc/>
-    public Task CallAsync(string service, string method, object? parameters = null, CancellationToken cancellationToken = default)
+    public Task CallAsync(string service, string method, object? parameters, CancellationToken cancellationToken)
     {
         return CallAsync<JsonElement>(service, method, parameters, null, cancellationToken);
     }
@@ -62,8 +58,8 @@ public sealed class KineticServiceClient : IKineticServiceClient
     public Task CallAsync(
         string service,
         string method,
-        object? parameters,
-        KineticCallSettings? callSettings,
+        object? parameters = null,
+        KineticCallSettings? callSettings = null,
         CancellationToken cancellationToken = default)
     {
         return CallAsync<JsonElement>(service, method, parameters, callSettings, cancellationToken);
@@ -73,8 +69,8 @@ public sealed class KineticServiceClient : IKineticServiceClient
     public Task<TResponse?> SendAsync<TResponse>(
         HttpMethod httpMethod,
         string relativePath,
-        object? body = null,
-        CancellationToken cancellationToken = default)
+        object? body,
+        CancellationToken cancellationToken)
     {
         return SendAsync<TResponse>(httpMethod, relativePath, body, null, cancellationToken);
     }
@@ -83,8 +79,8 @@ public sealed class KineticServiceClient : IKineticServiceClient
     public Task<TResponse?> SendAsync<TResponse>(
         HttpMethod httpMethod,
         string relativePath,
-        object? body,
-        KineticCallSettings? callSettings,
+        object? body = null,
+        KineticCallSettings? callSettings = null,
         CancellationToken cancellationToken = default)
     {
         Guard.NotNull(httpMethod, nameof(httpMethod));
