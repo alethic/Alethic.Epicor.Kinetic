@@ -1,74 +1,16 @@
 # Alethic.Epicor.Kinetic
 
-A thin, composable .NET client for the Epicor Kinetic REST v2 API. Works on .NET Framework 4.7.2+ and modern .NET.
+A .NET client for the Epicor Kinetic REST v2 API: service methods, Epicor Functions, BAQs and OData over one
+authenticated HttpClient pipeline. Works on .NET Framework 4.7.2+ and modern .NET.
 
 ```
 dotnet add package Alethic.Epicor.Kinetic.Client
 ```
 
-## Install and register
-
-```csharp
-services.AddKineticClient(configuration.GetSection(KineticOptions.SectionName));
-```
-
-```json
-{
-  "Kinetic": {
-    "BaseAddress": "https://example.epicorsaas.com/prod/",
-    "Company": "100",
-    "Plant": "MfgSys"
-  }
-}
-```
-
-Supply `Kinetic:ApiKey`, `Kinetic:Username` and `Kinetic:Password` from user secrets, environment variables or a vault.
-For SSO users set `KineticOptions.AccessTokenProvider` in code instead of a username and password.
-
 ## Use
 
-Functions:
-
-```csharp
-var result = await functions.InvokeAsync<ChargeResult>("ExampleFunctions", "CalculateCharge", new { orderNum = 123 });
-```
-
-Business object methods:
-
-```csharp
-var response = await services.CallAsync<BoResponse<CustomerTableset>>("Erp.BO.CustomerSvc", "GetByID", new { custNum = 1 });
-var customer = response!.ReturnObj!.Customer[0];
-```
-
-`KineticOptions.Plant`, `Language` and `FormatCulture` go out in the `CallSettings` header on every call. To use another plant
-for one call, pass `KineticCallSettings` to a service, function or BAQ call, or to `ForService`, `ForBaq` or `Configure` for every
-query of an OData context; values it leaves null keep the configured ones. Some business objects, such as
-`Erp.BO.CustShipSvc`, return only the rows of the session's plant, so reading them across plants takes one call per plant:
-
-```csharp
-var packs = await services.CallAsync<BoResponse<CustShipTableset>>(
-    "Erp.BO.CustShipSvc", "GetRows", parameters, new KineticCallSettings { Plant = "West" });
-```
-
-BAQs:
-
-```csharp
-var rows = await baq.QueryAsync<OpenOrderRow>("OpenOrders", new BaqQuery { Filter = "Customer_CustID eq 'ACME'", Top = 50 });
-```
-
-OData with Microsoft.OData.Client:
-
-```csharp
-var context = odata.ForService("Erp.BO.CustomerSvc");
-var query = (DataServiceQuery<Customer>)context.CreateQuery<Customer>("Customers").Where(c => c.CustID == "ACME");
-var customers = await query.ExecuteAsync();
-```
-
-Entity types need `[Key]` on their key columns. A container generated with OData Connected Service can be routed
-through the same pipeline with `odata.Configure(new Container(odata.ServiceRoot("Erp.BO.CustomerSvc")))`.
-
-Errors from Kinetic surface as `KineticApiException` with the status, `ErrorMessage`, `ErrorType`, `ErrorDetails` and
-`CorrelationId` parsed from the response.
+[The package README](src/Alethic.Epicor.Kinetic.Client/README.md) covers configuration and every client, and is what
+nuget.org shows.
 
 ## Layers
 

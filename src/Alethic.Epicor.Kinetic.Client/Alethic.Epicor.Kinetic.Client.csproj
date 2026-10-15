@@ -6,8 +6,9 @@
         <NoWarn>$(NoWarn);CS1591</NoWarn>
         <IsPackable>true</IsPackable>
         <PackageId>Alethic.Epicor.Kinetic.Client</PackageId>
-        <Description>Thin, composable .NET client for the Epicor Kinetic REST v2 API: Functions, business object methods, BAQs and OData.</Description>
+        <Description>.NET client for the Epicor Kinetic REST v2 API: service methods, Epicor Functions, BAQs and OData over one authenticated HttpClient pipeline.</Description>
         <PackageTags>epicor;kinetic;erp;rest;odata;client</PackageTags>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
     </PropertyGroup>
 
     <ItemGroup>
@@ -15,6 +16,10 @@
         <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.11" />
         <PackageReference Include="Microsoft.OData.Client" Version="7.22.0" />
         <PackageReference Include="Polyfill" Version="11.2.0" PrivateAssets="all" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="README.md" Pack="true" PackagePath="\" />
     </ItemGroup>
 
     <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
