@@ -190,8 +190,10 @@ The registered clients enforce the timeout themselves and leave `HttpClient.Time
 hand over `KineticHttpHandler` keeps its own `Timeout` as an outer limit, so set it to `Timeout.InfiniteTimeSpan` there
 too.
 
-Function calls, BAQ calls and entity set queries take it the same way. An OData context takes it once, in `ForService`, `ForBaq` or `Configure`,
-and sends it with every query it makes.
+Function calls, BAQ calls and entity set queries take it the same way, timeout included. An OData context takes it once,
+in `ForService`, `ForBaq` or `Configure`, and sends it with every query it makes. Its timeout applies to each query, and
+Microsoft.OData.Client wraps the `TaskCanceledException` in an `InvalidOperationException`, so look for it among the
+inner exceptions there. The shared `$metadata` download always uses the configured timeout.
 
 ## Errors
 

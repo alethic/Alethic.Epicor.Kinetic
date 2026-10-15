@@ -25,7 +25,7 @@ sealed class KineticODataRequestMessage : DataServiceClientRequestMessage
                 if (completed.IsFaulted)
                     completion.TrySetException(completed.Exception!.InnerExceptions);
                 else if (completed.IsCanceled)
-                    completion.TrySetCanceled();
+                    completion.TrySetException(CancellationOf(completed));
                 else
                     completion.TrySetResult(completed.Result);
 
@@ -36,6 +36,23 @@ sealed class KineticODataRequestMessage : DataServiceClientRequestMessage
             TaskScheduler.Default);
 
         return completion.Task;
+    }
+
+    /// <summary>
+    /// Returns the exception a cancelled task was cancelled with, so a timeout keeps its <see cref="TimeoutException"/>.
+    /// </summary>
+    static Exception CancellationOf(Task task)
+    {
+        try
+        {
+            task.GetAwaiter().GetResult();
+        }
+        catch (OperationCanceledException e)
+        {
+            return e;
+        }
+
+        return new TaskCanceledException(task);
     }
 
     readonly HttpClient _http;
