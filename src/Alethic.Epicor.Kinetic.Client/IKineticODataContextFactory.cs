@@ -17,9 +17,21 @@ public interface IKineticODataContextFactory
     DataServiceContext ForService(string service);
 
     /// <summary>
+    /// Context rooted at <c>api/v2/odata/{company}/{service}/</c>, optionally sending every request with call settings
+    /// of its own, such as another plant. Values the call settings leave null keep the configured ones.
+    /// </summary>
+    DataServiceContext ForService(string service, KineticCallSettings? callSettings = null);
+
+    /// <summary>
     /// Context rooted at <c>api/v2/odata/{company}/BaqSvc/{baqId}/</c>. The entity set is <c>Data</c>.
     /// </summary>
     DataServiceContext ForBaq(string baqId);
+
+    /// <summary>
+    /// Context rooted at <c>api/v2/odata/{company}/BaqSvc/{baqId}/</c>, optionally sending every request with call
+    /// settings of its own. The entity set is <c>Data</c>.
+    /// </summary>
+    DataServiceContext ForBaq(string baqId, KineticCallSettings? callSettings = null);
 
     /// <summary>
     /// Absolute service root for a business object service, for constructing generated containers.
@@ -31,6 +43,13 @@ public interface IKineticODataContextFactory
     /// Kinetic pipeline. Returns the same instance for chaining.
     /// </summary>
     TContext Configure<TContext>(TContext context)
+        where TContext : DataServiceContext;
+
+    /// <summary>
+    /// Routes any context through the authenticated Kinetic pipeline, optionally sending every request with call
+    /// settings of its own. Returns the same instance for chaining.
+    /// </summary>
+    TContext Configure<TContext>(TContext context, KineticCallSettings? callSettings = null)
         where TContext : DataServiceContext;
 
 }

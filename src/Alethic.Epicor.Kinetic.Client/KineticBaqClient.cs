@@ -40,30 +40,69 @@ public sealed class KineticBaqClient : IKineticBaqClient
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<TRow>> QueryAsync<TRow>(string baqId, BaqQuery? query = null, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<TRow>> QueryAsync<TRow>(string baqId, BaqQuery? query, CancellationToken cancellationToken)
+    {
+        return QueryAsync<TRow>(baqId, query, null, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<TRow>> QueryAsync<TRow>(
+        string baqId,
+        BaqQuery? query = null,
+        KineticCallSettings? callSettings = null,
+        CancellationToken cancellationToken = default)
     {
         var uri = DataUri(baqId, query?.ToQueryString() ?? string.Empty);
         var json = _options.JsonSerializerOptions;
-        var page = await KineticHttp.SendJsonAsync<ODataCollection<TRow>>(_http, _logger, HttpMethod.Get, uri, null, json, cancellationToken)
-            .ConfigureAwait(false);
+        var page = await KineticHttp.SendJsonAsync<ODataCollection<TRow>>(
+            _http,
+            _logger,
+            HttpMethod.Get,
+            uri,
+            null,
+            callSettings,
+            json,
+            cancellationToken).ConfigureAwait(false);
 
         return page?.Value ?? new List<TRow>();
     }
 
     /// <inheritdoc/>
-    public Task<TRow?> AddRowAsync<TRow>(string baqId, TRow row, CancellationToken cancellationToken = default)
+    public Task<TRow?> AddRowAsync<TRow>(string baqId, TRow row, CancellationToken cancellationToken)
     {
-        Guard.NotNull((object?)row, nameof(row));
-        var uri = DataUri(baqId, string.Empty);
-        return KineticHttp.SendJsonAsync<TRow>(_http, _logger, HttpMethod.Post, uri, row, _options.JsonSerializerOptions, cancellationToken);
+        return AddRowAsync(baqId, row, null, cancellationToken);
     }
 
     /// <inheritdoc/>
-    public Task<TRow?> UpdateRowAsync<TRow>(string baqId, TRow row, CancellationToken cancellationToken = default)
+    public Task<TRow?> AddRowAsync<TRow>(
+        string baqId,
+        TRow row,
+        KineticCallSettings? callSettings = null,
+        CancellationToken cancellationToken = default)
     {
         Guard.NotNull((object?)row, nameof(row));
         var uri = DataUri(baqId, string.Empty);
-        return KineticHttp.SendJsonAsync<TRow>(_http, _logger, KineticHttp.Patch, uri, row, _options.JsonSerializerOptions, cancellationToken);
+        var json = _options.JsonSerializerOptions;
+        return KineticHttp.SendJsonAsync<TRow>(_http, _logger, HttpMethod.Post, uri, row, callSettings, json, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Task<TRow?> UpdateRowAsync<TRow>(string baqId, TRow row, CancellationToken cancellationToken)
+    {
+        return UpdateRowAsync(baqId, row, null, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Task<TRow?> UpdateRowAsync<TRow>(
+        string baqId,
+        TRow row,
+        KineticCallSettings? callSettings = null,
+        CancellationToken cancellationToken = default)
+    {
+        Guard.NotNull((object?)row, nameof(row));
+        var uri = DataUri(baqId, string.Empty);
+        var json = _options.JsonSerializerOptions;
+        return KineticHttp.SendJsonAsync<TRow>(_http, _logger, KineticHttp.Patch, uri, row, callSettings, json, cancellationToken);
     }
 
     Uri DataUri(string baqId, string queryString)

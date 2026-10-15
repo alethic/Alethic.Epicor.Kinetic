@@ -39,9 +39,42 @@ static partial class KineticHttp
     public static object EmptyBody { get; } = new { };
 
     /// <summary>
+    /// Name of the request option that carries a call's <see cref="KineticCallSettings"/> to the handler.
+    /// </summary>
+    const string CallSettingsOption = "Alethic.Epicor.Kinetic.CallSettings";
+
+#if NET8_0_OR_GREATER
+    static readonly HttpRequestOptionsKey<KineticCallSettings> _callSettingsKey = new(CallSettingsOption);
+#endif
+
+    /// <summary>
     /// <c>HttpMethod.Patch</c> is missing from netstandard2.0.
     /// </summary>
     public static HttpMethod Patch { get; } = new("PATCH");
+
+    /// <summary>
+    /// Attaches call settings to a request, for <see cref="KineticHttpHandler"/> to apply.
+    /// </summary>
+    public static void SetCallSettings(HttpRequestMessage request, KineticCallSettings settings)
+    {
+#if NET8_0_OR_GREATER
+        request.Options.Set(_callSettingsKey, settings);
+#else
+        request.Properties[CallSettingsOption] = settings;
+#endif
+    }
+
+    /// <summary>
+    /// Returns the call settings attached to a request, or <c>null</c> when there are none.
+    /// </summary>
+    public static KineticCallSettings? GetCallSettings(HttpRequestMessage request)
+    {
+#if NET8_0_OR_GREATER
+        return request.Options.TryGetValue(_callSettingsKey, out var settings) ? settings : null;
+#else
+        return request.Properties.TryGetValue(CallSettingsOption, out var settings) ? settings as KineticCallSettings : null;
+#endif
+    }
 
     /// <summary>
     /// Resolves a relative API path against the client's base address, or the configured one when none is set.
@@ -63,7 +96,7 @@ static partial class KineticHttp
     /// Sends an optional JSON body and deserialises the JSON response. Throws <see cref="KineticApiException"/> on a
     /// non-success status. Returns <c>default</c> for an empty response.
     /// </summary>
-    public static async Task<T?> SendJsonAsync<T>(
+    public static Task<T?> SendJsonAsync<T>(
         HttpClient http,
         ILogger logger,
         HttpMethod method,
@@ -72,7 +105,27 @@ static partial class KineticHttp
         JsonSerializerOptions json,
         CancellationToken cancellationToken)
     {
+        return SendJsonAsync<T>(http, logger, method, uri, body, null, json, cancellationToken);
+    }
+
+    /// <summary>
+    /// Sends an optional JSON body with optional call settings and deserialises the JSON response. Throws
+    /// <see cref="KineticApiException"/> on a non-success status. Returns <c>default</c> for an empty response.
+    /// </summary>
+    public static async Task<T?> SendJsonAsync<T>(
+        HttpClient http,
+        ILogger logger,
+        HttpMethod method,
+        Uri uri,
+        object? body,
+        KineticCallSettings? callSettings,
+        JsonSerializerOptions json,
+        CancellationToken cancellationToken)
+    {
         using var request = new HttpRequestMessage(method, uri);
+        if (callSettings is not null)
+            SetCallSettings(request, callSettings);
+
         if (body is not null)
             request.Content = new StringContent(JsonSerializer.Serialize(body, body.GetType(), json), Encoding.UTF8, "application/json");
 

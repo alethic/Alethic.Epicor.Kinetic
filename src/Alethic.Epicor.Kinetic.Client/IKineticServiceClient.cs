@@ -16,24 +16,48 @@ public interface IKineticServiceClient
     /// method's named parameters (camelCase, for example <c>new { custNum = 1 }</c>). The response envelope is
     /// <c>{ returnObj, parameters }</c>; see <see cref="BoResponse{TReturn}"/>.
     /// </summary>
+    Task<TResponse?> CallAsync<TResponse>(string service, string method, object? parameters, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Calls a service method such as <c>Erp.BO.CustomerSvc/GetByID</c>, optionally with call settings of its own, such as
+    /// another plant. Values the call settings leave null keep the configured ones.
+    /// </summary>
     Task<TResponse?> CallAsync<TResponse>(
         string service,
         string method,
         object? parameters = null,
+        KineticCallSettings? callSettings = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Calls a service method and discards the response.
     /// </summary>
-    Task CallAsync(string service, string method, object? parameters = null, CancellationToken cancellationToken = default);
+    Task CallAsync(string service, string method, object? parameters, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Calls a service method, optionally with call settings of its own, and discards the response.
+    /// </summary>
+    Task CallAsync(
+        string service,
+        string method,
+        object? parameters = null,
+        KineticCallSettings? callSettings = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Sends an arbitrary JSON request relative to the instance root, for endpoints the shaped methods do not cover.
+    /// </summary>
+    Task<TResponse?> SendAsync<TResponse>(HttpMethod httpMethod, string relativePath, object? body, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Sends an arbitrary JSON request relative to the instance root, optionally with call settings of its own, such as
+    /// an OData query in another plant. Values the call settings leave null keep the configured ones.
     /// </summary>
     Task<TResponse?> SendAsync<TResponse>(
         HttpMethod httpMethod,
         string relativePath,
         object? body = null,
+        KineticCallSettings? callSettings = null,
         CancellationToken cancellationToken = default);
 
 }

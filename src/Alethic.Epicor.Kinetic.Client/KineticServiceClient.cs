@@ -27,10 +27,17 @@ public sealed class KineticServiceClient : IKineticServiceClient
     }
 
     /// <inheritdoc/>
+    public Task<TResponse?> CallAsync<TResponse>(string service, string method, object? parameters, CancellationToken cancellationToken)
+    {
+        return CallAsync<TResponse>(service, method, parameters, null, cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public Task<TResponse?> CallAsync<TResponse>(
         string service,
         string method,
         object? parameters = null,
+        KineticCallSettings? callSettings = null,
         CancellationToken cancellationToken = default)
     {
         Guard.NotNullOrWhiteSpace(service, nameof(service));
@@ -38,13 +45,34 @@ public sealed class KineticServiceClient : IKineticServiceClient
 
         var company = KineticHttp.Segment(_options.Company);
         var path = $"api/v2/odata/{company}/{KineticHttp.Segment(service)}/{KineticHttp.Segment(method)}";
-        return SendAsync<TResponse>(HttpMethod.Post, path, parameters ?? KineticHttp.EmptyBody, cancellationToken);
+        return SendAsync<TResponse>(HttpMethod.Post, path, parameters ?? KineticHttp.EmptyBody, callSettings, cancellationToken);
     }
 
     /// <inheritdoc/>
-    public Task CallAsync(string service, string method, object? parameters = null, CancellationToken cancellationToken = default)
+    public Task CallAsync(string service, string method, object? parameters, CancellationToken cancellationToken)
     {
-        return CallAsync<JsonElement>(service, method, parameters, cancellationToken);
+        return CallAsync<JsonElement>(service, method, parameters, null, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Task CallAsync(
+        string service,
+        string method,
+        object? parameters = null,
+        KineticCallSettings? callSettings = null,
+        CancellationToken cancellationToken = default)
+    {
+        return CallAsync<JsonElement>(service, method, parameters, callSettings, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Task<TResponse?> SendAsync<TResponse>(
+        HttpMethod httpMethod,
+        string relativePath,
+        object? body,
+        CancellationToken cancellationToken)
+    {
+        return SendAsync<TResponse>(httpMethod, relativePath, body, null, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -52,13 +80,22 @@ public sealed class KineticServiceClient : IKineticServiceClient
         HttpMethod httpMethod,
         string relativePath,
         object? body = null,
+        KineticCallSettings? callSettings = null,
         CancellationToken cancellationToken = default)
     {
         Guard.NotNull(httpMethod, nameof(httpMethod));
         Guard.NotNullOrWhiteSpace(relativePath, nameof(relativePath));
 
         var uri = KineticHttp.Combine(_http, _options, relativePath);
-        return KineticHttp.SendJsonAsync<TResponse>(_http, _logger, httpMethod, uri, body, _options.JsonSerializerOptions, cancellationToken);
+        return KineticHttp.SendJsonAsync<TResponse>(
+            _http,
+            _logger,
+            httpMethod,
+            uri,
+            body,
+            callSettings,
+            _options.JsonSerializerOptions,
+            cancellationToken);
     }
 
 }

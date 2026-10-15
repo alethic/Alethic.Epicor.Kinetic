@@ -132,4 +132,20 @@ public class FunctionClientTests
         Assert.Equal("65673cd6", ex.CorrelationId);
     }
 
+    /// <summary>
+    /// A call's own plant is sent for that invocation only; values it leaves null keep the configured ones.
+    /// </summary>
+    [Fact]
+    public async Task Invoke_applies_call_settings_to_one_call()
+    {
+        var (provider, handler) = TestHost.Build(options => options.Plant = "MfgSys");
+        var client = provider.GetRequiredService<IKineticFunctionClient>();
+
+        await client.InvokeAsync("ExampleFunctions", "CalculateCharge", new { orderNum = 1 }, new KineticCallSettings { Plant = "West" });
+        await client.InvokeAsync("ExampleFunctions", "CalculateCharge");
+
+        Assert.Equal("""{"Company":"100","Plant":"West"}""", handler.Requests[0].Header("CallSettings"));
+        Assert.Equal("""{"Company":"100","Plant":"MfgSys"}""", handler.Requests[1].Header("CallSettings"));
+    }
+
 }

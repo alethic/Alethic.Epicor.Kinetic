@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -89,6 +90,27 @@ public class BaqClientTests
         Assert.EndsWith("/BaqSvc/OpenOrders/Data", request.Uri.AbsoluteUri);
         Assert.Equal("""{"Customer_CustID":"ACME","OrderHed_TotalCharges":99}""", request.Body);
         Assert.Equal(99m, stored?.OrderHed_TotalCharges);
+    }
+
+    /// <summary>
+    /// Queries and writes carry a call's own settings; values the call leaves null keep the configured ones.
+    /// </summary>
+    [Fact]
+    public async Task Call_settings_apply_to_queries_and_writes()
+    {
+        var (provider, handler) = TestHost.Build(options => options.Language = "en");
+        handler.Respond = _ => FakeHttpHandler.Json(200, """{"value":[]}""");
+        var client = provider.GetRequiredService<IKineticBaqClient>();
+        var west = new KineticCallSettings { Plant = "West" };
+
+        await client.QueryAsync<BaqRow>("OpenOrders", null, west);
+        await client.AddRowAsync("OpenOrders", new BaqRow { Customer_CustID = "ACME" }, west);
+        await client.UpdateRowAsync("OpenOrders", new BaqRow { Customer_CustID = "ACME" }, west);
+        await client.QueryAsync<BaqRow>("OpenOrders");
+
+        const string West = """{"Company":"100","Plant":"West","Language":"en"}""";
+        Assert.All(handler.Requests.Take(3), r => Assert.Equal(West, r.Header("CallSettings")));
+        Assert.Equal("""{"Company":"100","Language":"en"}""", handler.Requests[3].Header("CallSettings"));
     }
 
 }
