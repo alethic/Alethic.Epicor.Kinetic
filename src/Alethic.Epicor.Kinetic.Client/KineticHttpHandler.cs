@@ -36,22 +36,40 @@ public sealed partial class KineticHttpHandler : DelegatingHandler
 
     static readonly MediaTypeWithQualityHeaderValue _jsonMediaType = new("application/json");
 
-    static string? BuildCallSettings(KineticOptions options)
+    /// <summary>
+    /// Builds the CallSettings header value from the configured values, each replaced by the call's own when it has
+    /// one. Returns <c>null</c> when there is no plant, language or format culture to send.
+    /// </summary>
+    static string? BuildCallSettings(KineticOptions options, KineticCallSettings? call)
     {
-        if (string.IsNullOrEmpty(options.Plant) && string.IsNullOrEmpty(options.Language) && string.IsNullOrEmpty(options.FormatCulture))
+        var plant = Pick(call?.Plant, options.Plant);
+        var language = Pick(call?.Language, options.Language);
+        var formatCulture = Pick(call?.FormatCulture, options.FormatCulture);
+        if (plant is null && language is null && formatCulture is null)
             return null;
 
         var settings = new Dictionary<string, string> { ["Company"] = options.Company };
-        if (!string.IsNullOrEmpty(options.Plant))
-            settings["Plant"] = options.Plant!;
+        if (plant is not null)
+            settings["Plant"] = plant;
 
-        if (!string.IsNullOrEmpty(options.Language))
-            settings["Language"] = options.Language!;
+        if (language is not null)
+            settings["Language"] = language;
 
-        if (!string.IsNullOrEmpty(options.FormatCulture))
-            settings["FormatCulture"] = options.FormatCulture!;
+        if (formatCulture is not null)
+            settings["FormatCulture"] = formatCulture;
 
         return JsonSerializer.Serialize(settings);
+    }
+
+    /// <summary>
+    /// Returns the call's value when it has one, else the configured value when that is not empty, else <c>null</c>.
+    /// </summary>
+    static string? Pick(string? call, string? configured)
+    {
+        if (!string.IsNullOrEmpty(call))
+            return call;
+
+        return string.IsNullOrEmpty(configured) ? null : configured;
     }
 
     readonly KineticOptions _options;
@@ -70,7 +88,7 @@ public sealed partial class KineticHttpHandler : DelegatingHandler
         if (_options.AccessTokenProvider is null)
             _basicCredentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{_options.Username}:{_options.Password}"));
 
-        _callSettings = BuildCallSettings(_options);
+        _callSettings = BuildCallSettings(_options, null);
     }
 
     /// <summary>
@@ -86,8 +104,13 @@ public sealed partial class KineticHttpHandler : DelegatingHandler
         if (request.Headers.Accept.Count == 0)
             request.Headers.Accept.Add(_jsonMediaType);
 
-        if (_callSettings is not null && !request.Headers.Contains("CallSettings"))
-            request.Headers.TryAddWithoutValidation("CallSettings", _callSettings);
+        if (!request.Headers.Contains("CallSettings"))
+        {
+            var call = KineticHttp.GetCallSettings(request);
+            var callSettings = call is null ? _callSettings : BuildCallSettings(_options, call);
+            if (callSettings is not null)
+                request.Headers.TryAddWithoutValidation("CallSettings", callSettings);
+        }
 
         var start = Stopwatch.GetTimestamp();
         var response = await base.SendAsync(request, cancellationToken).ConfigureAwait(false);

@@ -23,9 +23,30 @@ public interface IKineticServiceClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Calls a service method such as <c>Erp.BO.CustomerSvc/GetByID</c> with call settings of its own, such as another
+    /// plant. Values the call settings leave null keep the configured ones.
+    /// </summary>
+    Task<TResponse?> CallAsync<TResponse>(
+        string service,
+        string method,
+        object? parameters,
+        KineticCallSettings? callSettings,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Calls a service method and discards the response.
     /// </summary>
     Task CallAsync(string service, string method, object? parameters = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Calls a service method with call settings of its own and discards the response.
+    /// </summary>
+    Task CallAsync(
+        string service,
+        string method,
+        object? parameters,
+        KineticCallSettings? callSettings,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Sends an arbitrary JSON request relative to the instance root, for endpoints the shaped methods do not cover.
@@ -34,6 +55,17 @@ public interface IKineticServiceClient
         HttpMethod httpMethod,
         string relativePath,
         object? body = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Sends an arbitrary JSON request relative to the instance root with call settings of its own, such as an OData
+    /// query in another plant. Values the call settings leave null keep the configured ones.
+    /// </summary>
+    Task<TResponse?> SendAsync<TResponse>(
+        HttpMethod httpMethod,
+        string relativePath,
+        object? body,
+        KineticCallSettings? callSettings,
         CancellationToken cancellationToken = default);
 
 }
