@@ -45,7 +45,12 @@ sealed class FakeHttpHandler : HttpMessageHandler
     public Func<HttpRequestMessage, HttpResponseMessage> Respond { get; set; } = _ => Json(200, "{}");
 
     /// <summary>
-    /// Captures the request, including its body, then delegates to <see cref="Respond"/>.
+    /// How long to wait, honouring cancellation, before answering. Defaults to no wait.
+    /// </summary>
+    public TimeSpan Delay { get; set; } = TimeSpan.Zero;
+
+    /// <summary>
+    /// Captures the request, including its body, waits for <see cref="Delay"/>, then delegates to <see cref="Respond"/>.
     /// </summary>
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
@@ -53,6 +58,9 @@ sealed class FakeHttpHandler : HttpMessageHandler
         var headers = request.Headers.ToDictionary(h => h.Key, h => string.Join(",", h.Value), StringComparer.OrdinalIgnoreCase);
         var contentType = request.Content?.Headers.ContentType?.ToString();
         Requests.Add(new CapturedRequest(request.Method, request.RequestUri!, headers, body, contentType));
+        if (Delay > TimeSpan.Zero)
+            await Task.Delay(Delay, cancellationToken);
+
         return Respond(request);
     }
 

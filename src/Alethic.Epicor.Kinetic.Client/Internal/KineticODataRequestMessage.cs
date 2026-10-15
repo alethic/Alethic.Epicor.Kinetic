@@ -87,12 +87,12 @@ sealed class KineticODataRequestMessage : DataServiceClientRequestMessage
     public override ICredentials Credentials { get; set; } = null!;
 
     /// <summary>
-    /// Ignored. The HttpClient timeout applies.
+    /// Ignored. The call settings' timeout, or the configured one, applies.
     /// </summary>
     public override int Timeout { get; set; }
 
     /// <summary>
-    /// Ignored. The HttpClient timeout applies.
+    /// Ignored. The call settings' timeout, or the configured one, applies.
     /// </summary>
     public override int ReadWriteTimeout { get; set; }
 

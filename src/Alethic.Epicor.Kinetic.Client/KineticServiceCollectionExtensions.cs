@@ -1,5 +1,6 @@
 using System;
 using System.Net.Http;
+using System.Threading;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -87,7 +88,7 @@ public static class KineticServiceCollectionExtensions
             {
                 var options = provider.GetRequiredService<IOptions<KineticOptions>>().Value;
                 http.BaseAddress = options.GetBaseUri();
-                http.Timeout = options.Timeout;
+                http.Timeout = Timeout.InfiniteTimeSpan;
             })
             .AddHttpMessageHandler<KineticHttpHandler>();
 

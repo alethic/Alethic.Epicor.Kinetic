@@ -54,6 +54,14 @@ static partial class KineticHttp
     public static HttpMethod Patch { get; } = new("PATCH");
 
     /// <summary>
+    /// Returns whether a timeout is positive and within what a cancellation timer accepts, or infinite.
+    /// </summary>
+    public static bool IsValidTimeout(TimeSpan timeout)
+    {
+        return timeout == Timeout.InfiniteTimeSpan || (timeout > TimeSpan.Zero && timeout.TotalMilliseconds <= int.MaxValue);
+    }
+
+    /// <summary>
     /// Attaches call settings to a request, for <see cref="KineticHttpHandler"/> to apply.
     /// </summary>
     public static void SetCallSettings(HttpRequestMessage request, KineticCallSettings settings)

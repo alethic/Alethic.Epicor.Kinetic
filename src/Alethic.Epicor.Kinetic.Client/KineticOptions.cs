@@ -64,7 +64,8 @@ public sealed class KineticOptions
     public string? FormatCulture { get; set; }
 
     /// <summary>
-    /// HttpClient timeout applied to every Kinetic client.
+    /// How long a call may take unless its <see cref="KineticCallSettings.Timeout"/> says otherwise.
+    /// <see cref="System.Threading.Timeout.InfiniteTimeSpan"/> turns the limit off.
     /// </summary>
     public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(100);
 

@@ -17,8 +17,10 @@ namespace Alethic.Epicor.Kinetic.Client;
 
 /// <summary>
 /// Bottom layer. Turns any <see cref="HttpClient"/> into an authenticated Kinetic client by adding the API key,
-/// credentials, a JSON Accept header and the optional CallSettings header, and by logging each request at Debug
-/// level. Every other class in this library sits on top of it, including the OData contexts.
+/// credentials, a JSON Accept header and the optional CallSettings header, by enforcing the call's timeout, and by
+/// logging each request at Debug level. Every other class in this library sits on top of it, including the OData
+/// contexts. The <see cref="HttpClient.Timeout"/> of a client built by hand still applies on top of the call's timeout,
+/// so set it to <see cref="Timeout.InfiniteTimeSpan"/> to let calls run longer than it.
 /// </summary>
 public sealed partial class KineticHttpHandler : DelegatingHandler
 {
@@ -92,7 +94,9 @@ public sealed partial class KineticHttpHandler : DelegatingHandler
     }
 
     /// <summary>
-    /// Adds the Kinetic headers when the request does not already carry them, sends it, and logs the outcome.
+    /// Adds the Kinetic headers when the request does not already carry them, sends it within the call's timeout, and
+    /// logs the outcome. A timeout throws <see cref="TaskCanceledException"/> wrapping a <see cref="TimeoutException"/>,
+    /// as <see cref="HttpClient"/> does for its own timeout.
     /// </summary>
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
@@ -104,21 +108,45 @@ public sealed partial class KineticHttpHandler : DelegatingHandler
         if (request.Headers.Accept.Count == 0)
             request.Headers.Accept.Add(_jsonMediaType);
 
+        var call = KineticHttp.GetCallSettings(request);
         if (!request.Headers.Contains("CallSettings"))
         {
-            var call = KineticHttp.GetCallSettings(request);
             var callSettings = call is null ? _callSettings : BuildCallSettings(_options, call);
             if (callSettings is not null)
                 request.Headers.TryAddWithoutValidation("CallSettings", callSettings);
         }
 
         var start = Stopwatch.GetTimestamp();
-        var response = await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        var response = await SendWithinAsync(request, call?.Timeout ?? _options.Timeout, cancellationToken).ConfigureAwait(false);
         var elapsedMs = (Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency;
         Log.RequestCompleted(_logger, request.Method.Method, request.RequestUri, (int)response.StatusCode, elapsedMs);
         return response;
     }
 
+    /// <summary>
+    /// Sends the request, cancelling it when <paramref name="timeout"/> elapses first.
+    /// </summary>
+    async Task<HttpResponseMessage> SendWithinAsync(HttpRequestMessage request, TimeSpan timeout, CancellationToken cancellationToken)
+    {
+        if (timeout == Timeout.InfiniteTimeSpan)
+            return await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
+
+        using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutSource.CancelAfter(timeout);
+        try
+        {
+            return await base.SendAsync(request, timeoutSource.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException e) when (timeoutSource.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+        {
+            var message = $"The Kinetic request was canceled after its timeout of {timeout.TotalSeconds} seconds elapsed.";
+            throw new TaskCanceledException(message, new TimeoutException(message, e));
+        }
+    }
+
+    /// <summary>
+    /// Returns the Bearer header from the token provider when one is configured, else the Basic header.
+    /// </summary>
     async ValueTask<AuthenticationHeaderValue> CreateAuthorizationAsync(CancellationToken cancellationToken)
     {
         if (_options.AccessTokenProvider is { } provider)
