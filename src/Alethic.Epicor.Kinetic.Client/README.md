@@ -97,12 +97,18 @@ customer.RowMod = RowMod.Updated;
 await services.CallAsync("Erp.BO.CustomerSvc", "Update", new { ds = response.ReturnObj });
 ```
 
-`SendAsync` sends any other request relative to the instance root, such as an OData query on a service:
+`QueryAsync` reads a service's OData entity set, with `$filter`, `$select`, `$orderby`, `$top` and `$skip` in an
+`ODataQuery`. It reads every page the server returns:
 
 ```csharp
-var lines = await services.SendAsync<JsonElement>(
-    HttpMethod.Get, "api/v2/odata/100/Erp.BO.CustShipSvc/ShipDtls?$filter=OrderNum eq 5001");
+var lines = await services.QueryAsync<PackLine>("Erp.BO.CustShipSvc", "ShipDtls", new ODataQuery
+{
+    Filter = "OrderNum eq 5001",
+    Select = "PackNum,PackLine",
+});
 ```
+
+`SendAsync` sends any other request relative to the instance root.
 
 ### Epicor Functions
 
@@ -130,7 +136,7 @@ var rows = await baq.QueryAsync<OpenOrderRow>("OpenOrders", new BaqQuery
 });
 ```
 
-Updatable BAQs take writes with `AddRowAsync` and `UpdateRowAsync`.
+`QueryAsync` reads every page the server returns. Updatable BAQs take writes with `AddRowAsync` and `UpdateRowAsync`.
 
 ### OData
 
@@ -171,7 +177,7 @@ foreach (var plant in plants)
 }
 ```
 
-Function and BAQ calls take it the same way. An OData context takes it once, in `ForService`, `ForBaq` or `Configure`,
+Function calls, BAQ calls and entity set queries take it the same way. An OData context takes it once, in `ForService`, `ForBaq` or `Configure`,
 and sends it with every query it makes.
 
 ## Errors

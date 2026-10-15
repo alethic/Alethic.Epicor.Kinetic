@@ -7,39 +7,8 @@ namespace Alethic.Epicor.Kinetic.Client;
 /// Query options for a BAQ call. OData options map to <c>$filter</c> and friends; <see cref="Parameters"/> are BAQ
 /// parameters.
 /// </summary>
-public sealed record BaqQuery
+public sealed record BaqQuery : ODataQuery
 {
-
-    static void Add(List<string> parts, string key, string? value)
-    {
-        if (!string.IsNullOrEmpty(value))
-            parts.Add($"{key}={Uri.EscapeDataString(value)}");
-    }
-
-    /// <summary>
-    /// OData <c>$filter</c> expression over the BAQ's output columns, for example <c>Customer_CustID eq 'ACME'</c>.
-    /// </summary>
-    public string? Filter { get; init; }
-
-    /// <summary>
-    /// Comma-separated output columns to return, as OData <c>$select</c>.
-    /// </summary>
-    public string? Select { get; init; }
-
-    /// <summary>
-    /// OData <c>$orderby</c> expression.
-    /// </summary>
-    public string? OrderBy { get; init; }
-
-    /// <summary>
-    /// Maximum number of rows to return, as OData <c>$top</c>.
-    /// </summary>
-    public int? Top { get; init; }
-
-    /// <summary>
-    /// Number of rows to skip, as OData <c>$skip</c>.
-    /// </summary>
-    public int? Skip { get; init; }
 
     /// <summary>
     /// BAQ parameters, sent by name in the query string.
@@ -47,28 +16,17 @@ public sealed record BaqQuery
     public IReadOnlyDictionary<string, string>? Parameters { get; init; }
 
     /// <summary>
-    /// Renders the options as a URL query string starting with <c>?</c>, or an empty string when nothing is set.
+    /// Adds the OData options that are set, then the BAQ parameters, to the query string parts.
     /// </summary>
-    internal string ToQueryString()
+    internal override void AddTo(List<string> parts)
     {
-        var parts = new List<string>();
-        Add(parts, "$filter", Filter);
-        Add(parts, "$select", Select);
-        Add(parts, "$orderby", OrderBy);
-
-        if (Top is { } top)
-            parts.Add($"$top={top}");
-
-        if (Skip is { } skip)
-            parts.Add($"$skip={skip}");
+        base.AddTo(parts);
 
         if (Parameters is not null)
         {
             foreach (var parameter in Parameters)
                 parts.Add($"{Uri.EscapeDataString(parameter.Key)}={Uri.EscapeDataString(parameter.Value)}");
         }
-
-        return parts.Count == 0 ? string.Empty : "?" + string.Join("&", parts);
     }
 
 }

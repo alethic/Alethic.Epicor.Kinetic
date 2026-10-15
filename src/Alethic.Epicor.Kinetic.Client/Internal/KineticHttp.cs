@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -143,6 +144,32 @@ static partial class KineticHttp
 
         using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
         return await JsonSerializer.DeserializeAsync<T>(stream, json, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Reads every row of an OData collection, following <c>@odata.nextLink</c> while the server pages. A relative next
+    /// link resolves against the page it came from.
+    /// </summary>
+    public static async Task<IReadOnlyList<T>> QueryAllAsync<T>(
+        HttpClient http,
+        ILogger logger,
+        Uri uri,
+        KineticCallSettings? callSettings,
+        JsonSerializerOptions json,
+        CancellationToken cancellationToken)
+    {
+        var rows = new List<T>();
+        for (Uri? next = uri; next is not null;)
+        {
+            var page = await SendJsonAsync<ODataPage<T>>(http, logger, HttpMethod.Get, next, null, callSettings, json, cancellationToken)
+                .ConfigureAwait(false);
+            if (page?.Value is { } values)
+                rows.AddRange(values);
+
+            next = string.IsNullOrEmpty(page?.NextLink) ? null : new Uri(next, page!.NextLink);
+        }
+
+        return rows;
     }
 
 }

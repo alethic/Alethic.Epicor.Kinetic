@@ -16,8 +16,8 @@ public interface IKineticBaqClient
     Task<IReadOnlyList<TRow>> QueryAsync<TRow>(string baqId, BaqQuery? query, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Executes a BAQ and returns its rows, optionally with call settings of its own, such as another plant. Values the
-    /// call settings leave null keep the configured ones.
+    /// Executes a BAQ and returns its rows, following the server's pages, optionally with call settings of its own, such
+    /// as another plant. Values the call settings leave null keep the configured ones.
     /// </summary>
     Task<IReadOnlyList<TRow>> QueryAsync<TRow>(
         string baqId,

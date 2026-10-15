@@ -113,4 +113,22 @@ public class BaqClientTests
         Assert.Equal("""{"Company":"100","Language":"en"}""", handler.Requests[3].Header("CallSettings"));
     }
 
+    /// <summary>
+    /// A BAQ the server pages is read to the end.
+    /// </summary>
+    [Fact]
+    public async Task Query_follows_the_next_link()
+    {
+        var (provider, handler) = TestHost.Build();
+        handler.Respond = request => request.RequestUri!.Query.Contains("$skiptoken", System.StringComparison.Ordinal)
+            ? FakeHttpHandler.Json(200, """{"value":[{"Customer_CustID":"BETA"}]}""")
+            : FakeHttpHandler.Json(200, """{"value":[{"Customer_CustID":"ACME"}],"@odata.nextLink":"Data?$skiptoken=1"}""");
+        var client = provider.GetRequiredService<IKineticBaqClient>();
+
+        var rows = await client.QueryAsync<BaqRow>("OpenOrders");
+
+        Assert.Equal(["ACME", "BETA"], rows.Select(r => r.Customer_CustID));
+        Assert.EndsWith("/BaqSvc/OpenOrders/Data?$skiptoken=1", handler.Requests[1].Uri.AbsoluteUri);
+    }
+
 }
