@@ -6,9 +6,9 @@ come to hold more than the client; the client is `Alethic.Epicor.Kinetic.Client`
 
 ## Layout
 
-- `src/Alethic.Epicor.Kinetic.Client` - the library. Targets `netstandard2.0` and `net8.0`.
-- `tests/Alethic.Epicor.Kinetic.Client.Tests` - xUnit tests. Target `net10.0` and `net48` so the netstandard build
-  is exercised on .NET Framework.
+- `src/Alethic.Epicor.Kinetic.Client` - the library. Targets `netstandard2.0`, `net472` and `net8.0`.
+- `tests/Alethic.Epicor.Kinetic.Client.Tests` - xUnit tests. Target `net10.0` and `net48` so the net472 build is
+  exercised on .NET Framework.
 - `samples/Alethic.Epicor.Kinetic.Sample` - command-line explorer for a live instance. Targets `net10.0`.
 - `src/dist-nuget`, `src/dist-tests` - NoTargets projects that pack the library and publish each test project per
   target framework. `Alethic.Epicor.Kinetic.dist.msbuildproj` drives them and writes to `dist/`.
@@ -75,13 +75,13 @@ Small wrapping classes composed through DI. `AddKineticClient` registers everyth
 
 ## Target framework rules
 
-The library must compile for `netstandard2.0`, so inside `src/`:
+The library must compile for `netstandard2.0` and `net472`, so inside `src/`:
 
 - No `ArgumentNullException.ThrowIfNull` or `ArgumentException.ThrowIfNullOrWhiteSpace`; use `Internal/Guard`.
 - No `HttpMethod.Patch`; use `KineticHttp.Patch`. No `Stopwatch.GetElapsedTime`, `string.EndsWith(char)`,
   `ReadAsStringAsync(CancellationToken)`, `await using`, or `KeyValuePair` deconstruction.
 - `Polyfill` (source-only, `PrivateAssets="all"`) supplies `IsExternalInit` and friends. Records and `init` are fine.
-- `System.Text.Json` is referenced explicitly for netstandard2.0 only.
+- `System.Text.Json` is referenced explicitly for netstandard2.0 and net472 only.
 - Prefer `#if NET8_0_OR_GREATER` over dropping a feature when a modern API materially helps.
 
 ## Kinetic API facts
