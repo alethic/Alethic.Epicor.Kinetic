@@ -86,7 +86,7 @@ jobs:
         include:
         - { run: Alethic.Epicor.Kinetic.Client.Tests, tfm: net10.0, sys: win-x64 }
         - { run: Alethic.Epicor.Kinetic.Client.Tests, tfm: net10.0, sys: linux-x64 }
-        # the netstandard2.0 build of the library, exercised on .NET Framework
+        # the net472 build of the library, exercised on .NET Framework
         - { run: Alethic.Epicor.Kinetic.Client.Tests, tfm: net48, sys: win-x64 }
     name: Test (${{ matrix.run }}:${{ matrix.tfm }}:${{ matrix.sys }})
     needs:
